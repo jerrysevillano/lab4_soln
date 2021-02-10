@@ -19,11 +19,11 @@ higher-order functions `curry` and `uncurry` for currying and uncurrying
 binary functions (functions of two arguments). The functions are named
 after mathematician Haskell Curry '1920. (By way of reminder, a
 curried function takes its arguments one at a time. An uncurried
-function takes them all at once in a tuple.)
+function takes them all at once in a pair.)
 
-We start with the polymorphic higher-order function `curry`, which takes
-as its argument an uncurried function and returns the curried version
-of its argument function.
+We start with the polymorphic higher-order function `curry`, which
+takes as its argument an uncurried binary function and returns the
+curried version of its argument function.
 
 Before starting to code, pull out a sheet of paper and a pencil and
 with your partner work out the answers to the following seven
@@ -84,10 +84,11 @@ the function `curry`.
 
        (('a * 'b) -> 'c) -> ('a -> ('b -> 'c))      .
 
-   Dropping extraneous parentheses since the `->` type operator is right
-   associative, we can also write this as
+   Dropping extraneous parentheses since the `->` type operator is
+   right associative (and of lower precedence than `*`, we can also
+   write this as
 
-       (('a * 'b) -> 'c) -> 'a -> 'b -> 'c      .
+       ('a * 'b -> 'c) -> 'a -> 'b -> 'c      .
 
    A good name for the argument of the curry function is `uncurried`
    (6), to emphasize that it is an uncurried function.
@@ -96,14 +97,14 @@ the function `curry`.
    the curry function. We start with the first line giving the argument
    structure (7):
 
-       let curry (uncurried : ('a * 'b) -> 'c) : 'a -> 'b -> 'c = ...
+       let curry (uncurried : 'a * 'b -> 'c) : 'a -> 'b -> 'c = ...
 
    The return type is a function type, so we'll want to build a function
    value to return. We use the `fun _ -> _` anonymous function
    construction to do so, carefully labeling the type of the function's
    argument as a reminder of what's going on:
 
-       let curry (uncurried : ('a * 'b) -> 'c) : 'a -> 'b -> 'c = 
+       let curry (uncurried : 'a * 'b -> 'c) : 'a -> 'b -> 'c = 
          fun (x : 'a) -> ...
 
    The type of the argument of this anonymous function is `'a` because
@@ -111,7 +112,7 @@ the function `curry`.
    ('b -> 'c)`. This function should return a function of type `'b ->
    'c`. We'll construct that as an anonymous function as well:
 
-       let curry (uncurried : ('a * 'b) -> 'c) : 'a -> 'b -> 'c = 
+       let curry (uncurried : 'a * 'b -> 'c) : 'a -> 'b -> 'c = 
          fun (x : 'a) -> 
            fun (y : 'b) -> ...
 
@@ -122,7 +123,7 @@ the function `curry`.
    `uncurried` to `x` and `y` (in an uncurried fashion, of course), to
    obtain the value of type `'c`:
 
-       let curry (uncurried : ('a * 'b) -> 'c) : 'a -> 'b -> 'c = 
+       let curry (uncurried : 'a * 'b -> 'c) : 'a -> 'b -> 'c = 
          fun (x : 'a) -> 
            fun (y : 'b) -> uncurried (x, y) ;;
 
@@ -132,7 +133,7 @@ the function `curry`.
    itself. We've already done so for the argument uncurried. Let's use
    that notation for the `x` and `y` arguments as well.
 
-       let curry (uncurried : ('a * 'b) -> 'c) (x : 'a) (y : 'b) : 'c =
+       let curry (uncurried : 'a * 'b -> 'c) (x : 'a) (y : 'b) : 'c =
          uncurried (x, y) ;;
 
    To make clearer what's going on, we can even drop the explicit
@@ -153,7 +154,7 @@ the function `curry`.
    to do to make our typing intentions known to the
    compiler/interpreter. *)
   
-let curry (uncurried : ('a * 'b) -> 'c) (x : 'a) (y : 'b) : 'c =
+let curry (uncurried : 'a * 'b -> 'c) (x : 'a) (y : 'b) : 'c =
   uncurried (x, y) ;;
 
 (*......................................................................
@@ -163,7 +164,7 @@ the uncurried version of its argument function.  You may want to go
 through the same 7-step process to get started.
 ......................................................................*)
 
-let uncurry (curried : 'a -> 'b -> 'c) ((x, y) : ('a * 'b)) : 'c =
+let uncurry (curried : 'a -> 'b -> 'c) (x, y : 'a * 'b) : 'c =
   curried x y ;;
 
 (*......................................................................
@@ -182,6 +183,15 @@ times functions. Call them `plus` and `times`.
 let plus = uncurry ( + ) ;;
      
   let times = uncurry ( * ) ;;
+
+(* Did you write something like this?
+
+    let plus x y = 
+      ...more stuff here...
+
+   Remember, functions are first-class values in OCaml; they can be
+   returned by other functions. So you don't always need to give the
+   arguments explicitly in a function definition.  *)
   
 (*......................................................................
 Exercise 4: Recall the `prods` function from Lab 1:
@@ -200,7 +210,7 @@ let prods = List.map times ;;
 (* Elegant, no? *)  
 
 (*======================================================================
-Part 2: Option types
+Part 2: Option types and exceptions
 
 In Lab 2, you implemented a function `max_list` that returns the maximum
 element in a non-empty integer list. Here's a possible implementation
@@ -416,9 +426,15 @@ match is not exhaustive and it raises an exception when given lists of
 unequal length. How can you use option types to generate an alternate
 solution without this property?
 
-Do so below in a new definition of `zip`, called `zip_opt` to make clear
-that its signature has changed, which returns an appropriate option
-type in case it is called with lists of unequal length.
+Do so below in a new definition of `zip`, called `zip_opt` to make
+clear that its signature has changed, which returns an appropriate
+option type in case it is called with lists of unequal length. Here
+are some examples:
+
+    # zip_opt [1; 2] [true; false] ;;
+    - : (int * bool) list option = Some [(1, true); (2, false)]
+    # zip_opt [1; 2] [true; false; true] ;;
+    - : (int * bool) list option = None
 ......................................................................*)
 
 let rec zip_opt (x : 'a list) (y : 'b list) : (('a * 'b) list) option =
@@ -487,8 +503,8 @@ let dotprod (a : int list) (b : int list) : int option =
         (zip_opt a b) ;;
 
 (*......................................................................
-Exercise 15: Reimplement `zip_opt` along the same lines, as `zip_opt_2`
-below.
+Exercise 15: Reimplement `zip_opt` using the `maybe` function, as
+`zip_opt_2` below.
 ......................................................................*)
 
 (* We remove the embedded match using a maybe: *)
@@ -502,9 +518,9 @@ let rec zip_opt_2 (x : 'a list) (y : 'b list) : (('a * 'b) list) option =
   | _, _ -> None ;;
 
 (*......................................................................
-Exercise 16: For the energetic, reimplement `max_list_opt` along the
-same lines. There's likely to be a subtle issue here, since the `maybe`
-function always passes along the `None`.
+Exercise 16: [Optional] For the energetic, reimplement `max_list_opt`
+along the same lines. There's likely to be a subtle issue here, since
+the `maybe` function always passes along the `None`.
 ......................................................................*)
 
 let rec max_list_opt_2 (lst : int list) : int option =
